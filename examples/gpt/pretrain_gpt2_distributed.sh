@@ -1,15 +1,15 @@
 #! /bin/bash
 # Runs the "345M" parameter model
 
-DATA_PATH=<Specify path where >
-CHECKPOINT_PATH=<Specify path>
+DATA_PATH=/root/paddlejob/workspace/env_run/data  #<Specify path where >
+CHECKPOINT_PATH=/tmp/checkpoint
 
 export WORKER_0_HOST=127.0.0.1
 export DMLC_NODE_HOST=127.0.0.1
 export WORKER_0_PORT=6000
 export NUM_WORKER=1
 export WORKER_RANK=0
-export GPU_PER_WORKER=8
+export GPU_PER_WORKER=1
 
 export BYTEPS_WITH_UCX=0 
 export DMLC_ENABLE_UCX=0
@@ -31,8 +31,8 @@ echo base_dir $base_dir
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 ds_config='{
-    "train_micro_batch_size_per_gpu":16,
-    "train_batch_size" : 16,
+    "train_micro_batch_size_per_gpu":4,
+    "train_batch_size" : 4,
     "gradient_accumulation_steps": 2,
     "steps_per_print": 1,
     "gradient_clipping": 1.0,
@@ -64,7 +64,7 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --num-layers 24 \
        --hidden-size 1024 \
        --train-batch-size 64 \
-       --gradient_accumulation_steps 16 \
+       --gradient_accumulation_steps 8 \
        --num-attention-heads 16 \
        --batch-size 4 \
        --seq-length 1024 \
@@ -73,7 +73,7 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --lr-decay-iters 450000 \
        --save $CHECKPOINT_PATH \
        --load $CHECKPOINT_PATH \
-       --data-path $DATA_PATH/openwebtext-gpt2_text_document \
+       --data-path $DATA_PATH/my-gpt2_text_document \
        --vocab-file $DATA_PATH/gpt2-vocab.json \
        --merge-file $DATA_PATH/gpt2-merges.txt \
        --data-impl mmap \

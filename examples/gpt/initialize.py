@@ -68,6 +68,22 @@ def get_optimizer(model):
     while isinstance(model, (torchDDP, LocalDDP, FP16_Module)):
         model = model.module
     param_groups = get_params_for_weight_decay_optimization(model)
+    param_groups = list(param_groups)
+    def rm_duplicate_params(params):
+        new_params = []
+        pids = []
+        for p in params:
+            if id(p) in pids:
+                continue
+            new_params.append(p)
+            pids.append(id(p))
+        return new_params
+    print_rank_0(type(param_groups), file=open("init-param.txt", "a"))
+    for i, pg in enumerate(param_groups):
+        print_rank_0(list(pg.keys()), file=open("init-param.txt", "a"))
+        for k in list(pg.keys()):
+            if k == "params":
+                param_groups[i][k] = rm_duplicate_params(pg[k])
 
     # Add model parallel attribute if it is not set.
     for param_group in param_groups:

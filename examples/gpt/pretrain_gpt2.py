@@ -253,20 +253,26 @@ def lr_scheduler_builder(optimizer):
     
     return lr_scheduler
 
-
+def printlog(message): 
+    print_rank_0(message, file=open("trainlog.0", "a"))
 def pretrain(model_provider, args_defaults={}):
+    printlog("start training")
     initialize_megatron(args_defaults=args_defaults)
+    printlog("megatron initialized")
     timers = get_timers()
 
     # Model, optimizer, and learning rate.
     timers('model and optimizer').start()
+    printlog("providing model")
     model = model_provider()
+    printlog("model provided and initialing pipeline")
     engine, optimizer, lr_scheduler = initialize_pipeline(model, None, None, lr_scheduler_builder)
+    printlog("initialized pipeline")
     timers('model and optimizer').stop()
 
     # Print setup timing.
-    print_rank_0('done with setups ...')
-    print_rank_0('training ...')
+    printlog('done with setups ...')
+    printlog('training ...')
 
     train(engine, optimizer, lr_scheduler)
 
