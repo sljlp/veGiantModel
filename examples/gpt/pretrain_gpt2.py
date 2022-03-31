@@ -225,6 +225,7 @@ def model_provider():
 
     print_rank_0('building GPT2 model ...')
     model = GPTModelPiped()
+    print_rank_0(model, file=open("model.txt", "a"))
     return model
 
 def lr_scheduler_builder(optimizer):

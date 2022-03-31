@@ -9,11 +9,13 @@ export DMLC_NODE_HOST=127.0.0.1
 export WORKER_0_PORT=6000
 export NUM_WORKER=1
 export WORKER_RANK=0
-export GPU_PER_WORKER=1
+export GPU_PER_WORKER=2
 
-export BYTEPS_WITH_UCX=0 
+export BYTEPS_WITH_UCX=0
 export DMLC_ENABLE_UCX=0
 export DMLC_ENABLE_RDMA=0
+
+export DMLC_NUM_WORKER=$((GPU_PER_WORKER * NUM_WORKER))
 
 MASTER_PORT=6002
 MASTER_ADDR=$WORKER_0_HOST
@@ -31,9 +33,9 @@ echo base_dir $base_dir
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 ds_config='{
-    "train_micro_batch_size_per_gpu":4,
-    "train_batch_size" : 4,
-    "gradient_accumulation_steps": 2,
+    "train_micro_batch_size_per_gpu":64,
+    "train_batch_size" : 64,
+    "gradient_accumulation_steps": 1,
     "steps_per_print": 1,
     "gradient_clipping": 1.0,
     "zero_optimization": {
@@ -55,18 +57,18 @@ ds_config='{
     },
     "wall_clock_breakdown": true
 }'
-
+CUDA_VISIBLE_DEVICES=0,1 \
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --no_python --use_env python3 \
        ${base_dir}/pretrain_gpt2.py \
-       --model-parallel-size 2 \
+       --model-parallel-size 1 \
        --num-stages 2 \
-       --num-layers 24 \
-       --hidden-size 1024 \
-       --train-batch-size 64 \
-       --gradient_accumulation_steps 8 \
-       --num-attention-heads 16 \
-       --batch-size 4 \
+       --num-layers 16 \
+       --hidden-size 768 \
+       --train-batch-size 4 \
+       --gradient_accumulation_steps 2 \
+       --num-attention-heads 12 \
+       --batch-size 2 \
        --seq-length 1024 \
        --max-position-embeddings 1024 \
        --train-iters 500000 \

@@ -138,7 +138,7 @@ def setup_model_and_optimizer(model, optimizer, train_dataset_provider, lr_sched
             sum([p.nelement() for p in model.parameters()])), flush=True)
 
     if args.deepspeed_pipeline:
-        print_rank_0("Pipeline Parallelism is enabled.")
+        print_rank_0("Pipeline Parallelism is enabled.", file=open("pipeline.txt", "a"))
         train_data = train_dataset_provider() if train_dataset_provider is not None else None
         _param_dict = json.loads(args.config_param)
         engine, optimizer, _, lr_scheduler = veGiantModel.initialize(

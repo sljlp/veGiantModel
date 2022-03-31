@@ -16,6 +16,8 @@ from megatron import get_tokenizer
 from veGiantModel.engine.module import VeGiantModule
 import veGiantModel
 
+from megatron import print_rank_0
+
 class GPTModelPiped(VeGiantModule):
     def __init__(self):
         args = get_args()
@@ -162,6 +164,7 @@ class EmbeddingPiped(Embedding):
         self.embedding_weight = self.word_embeddings.weight
 
     def forward(self, inputs):
+        print_rank_0(inputs, file=open("inputs.txt", "a"))
         input_ids, position_ids, attention_mask = inputs
         return super().forward(input_ids, position_ids, None), attention_mask
 

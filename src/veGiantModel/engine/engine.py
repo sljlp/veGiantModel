@@ -16,6 +16,8 @@ from deepspeed.runtime.dataloader import RepeatingLoader
 
 from deepspeed.runtime.pipe.module import PipelineModule, PipelineError
 from deepspeed.runtime.pipe.engine import PipelineEngine
+
+from megatron import print_rank_0
 from . import p2p
 from . import schedule
 try:
@@ -404,17 +406,22 @@ class VeGiantModelEngine(PipelineEngine):
         # Do the work
         self.timers('train_batch').start()
         # We only enable prefetching starting from the second batch
+        print_rank_0("ENABLE_PYTORCH_BROADCAST:", ENABLE_PYTORCH_BROADCAST, file=open("enable_torch_broadcast.txt", "a"))
         if not ENABLE_PYTORCH_BROADCAST:
             sched = schedule.BytePSTrainSchedule(micro_batches=self.micro_batches,
                                                 stages=self.num_stages,
                                                 stage_id=self.stage_id, prefetch=not self.first_train)
         else:
+            print_rank_0("building schedule ...", file=open("enable_torch_broadcast.txt", "a"))
             sched = schedule.TrainSchedule(micro_batches=self.micro_batches,
                                        stages=self.num_stages,
                                        stage_id=self.stage_id)
+            print_rank_0("built schedule ...", file=open("enable_torch_broadcast.txt", "a"))
         cmd = ','.join(str(x) for x in sched)
         # log_dist(f'stage_id: {self.stage_id}, sched:{cmd}', ranks=[-1], level=logging.INFO)
+        print_rank_0("exec schedule ...\n",cmd,file=open("enable_torch_broadcast.txt", "a"))
         self._exec_schedule(sched)
+        print_rank_0("execed schedule ...", file=open("enable_torch_broadcast.txt", "a"))
         self.agg_train_loss = self._aggregate_total_loss()
         self.timers('train_batch').stop()
 
@@ -680,7 +687,9 @@ class VeGiantModelEngine(PipelineEngine):
         self.tput_timer.start()
         self.mem_status('BEFORE FWD', reset_max=True)
         self._profiling_func_enter('_exec_bps_forward_pass')
-
+        print_rank_0(self.pipe_buffers["inputs"], file=open("inputs_buffer.txt", "a"))
+        print_rank_0("buffer id:", buffer_id, file=open("inputs_buffer.txt", "a"))
+        print_rank_0(self.pipe_buffers["inputs"][buffer_id], file=open("inputs_buffer.txt", "a"))
         if isinstance(self.pipe_buffers['inputs'][buffer_id], tuple):
             inputs = tuple(t.clone() for t in self.pipe_buffers['inputs'][buffer_id])
         else:
@@ -692,9 +701,11 @@ class VeGiantModelEngine(PipelineEngine):
         # Zero out the gradients each time we use the tensor because only the data in
         # tensor changes across batches
         self._zero_grads(inputs)
-
+        print_rank_0("before forward", file=open("forward.txt", "a"))
+        print_rank_0("Tensors", file=open("forward.txt", "a"))
+        print_rank_0(inputs, file=open("forward.txt", "a"))
         outputs = super(PipelineEngine, self).forward(inputs)
-
+        print_rank_0("after forward", file=open("forward.txt", "a"))
         # Partition the outputs if we are not the last stage
         assert not self.is_pipe_partitioned
 
@@ -1544,6 +1555,7 @@ class VeGiantModelEngine(PipelineEngine):
     }
 
     def _exec_schedule(self, pipe_schedule):
+        print_rank_0("exec schedule", file=open("exe_schedule.txt", "a"))
         self._reserve_pipe_buffers(pipe_schedule.num_pipe_buffers())
         # For each step in the schedule
         has_optim_step = False

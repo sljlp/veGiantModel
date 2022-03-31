@@ -289,8 +289,11 @@ class PipelineParallelGrid:
                     num_pp *= prime
                 else:
                     num_dp *= prime
+            print("building _topo:", "dp num:", num_dp, "pp num:", num_pp)
             self._topo = PipeDataParallelTopology(num_dp=num_dp, num_pp=num_pp)
+        
         self.data_parallel_size = max(self._topo.get_dim('data'), 1)
+        print("data parallel size:",self.data_parallel_size)
         self.pipe_parallel_size = max(self._topo.get_dim('pipe'), 1)
         self.model_parallel_size = max(self._topo.get_dim('model'), 1)
         assert self._is_grid_valid(), "Invalid Grid"
@@ -510,7 +513,9 @@ class PipelineParallelGrid:
     def _is_grid_valid(self):
         ranks = 1
         for ax in self._topo.get_axis_names():
+            print("ax name:", ax, "ax dim", self._topo.get_dim(ax))
             ranks *= self._topo.get_dim(ax)
+        print("_is_grid_valid: ranks:", ranks, "world_size:", dist.get_world_size())
         return ranks == dist.get_world_size()
 
     #returns the global rank of the process with the provided stage id
